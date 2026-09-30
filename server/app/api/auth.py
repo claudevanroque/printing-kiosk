@@ -34,8 +34,8 @@ router = APIRouter(
 def register(payload: RegisterTenantRequest, db: Session = Depends(get_db), platform_admin: User = Depends(require_platform_admin)):
     tenant, user = tenant_service.register_tenant(
         db,
-        bussiness_name=payload.bussiness_name,
-        bussiness_slug=payload.bussiness_slug,
+        business_name=payload.business_name,
+        business_slug=payload.business_slug,
         email=payload.email,
         password=payload.password,
     )
@@ -48,7 +48,6 @@ def register(payload: RegisterTenantRequest, db: Session = Depends(get_db), plat
         "user": {
             "id": user.id,
             "email": user.email,
-            "role": user.role
         }
     }
 

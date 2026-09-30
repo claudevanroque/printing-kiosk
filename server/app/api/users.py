@@ -26,6 +26,6 @@ def get_current_user_info(current_user: User = Depends(get_current_user)):
 @router.get("/me/tenants")
 def get_my_tenants(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
 
-    memberships = tenant_repository.get_user_memberships(db, current_user.id)
+    memberships = tenant_repository.get_user_memberships(db, user_id=current_user.id)
 
     return memberships

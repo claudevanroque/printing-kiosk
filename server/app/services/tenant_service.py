@@ -7,12 +7,12 @@ from app.repositories import (
     user_repository,
 )
 
-def register_tenant(db: Session, *, bussiness_name: str, bussiness_slug: str, email: str, password: str):
-    bussiness_slug = bussiness_slug.strip().lower()
-    bussiness_name = bussiness_name.strip()
+def register_tenant(db: Session, *, business_name: str, business_slug: str, email: str, password: str):
+    business_slug = business_slug.strip().lower()
+    business_name = business_name.strip()
     email = email.strip().lower()
 
-    if tenant_repository.get_by_slug(db, slug=bussiness_slug):
+    if tenant_repository.get_by_slug(db, slug=business_slug):
         raise HTTPException(
             status_code=400,
             detail="Tenant with this slug already exists"
@@ -25,9 +25,9 @@ def register_tenant(db: Session, *, bussiness_name: str, bussiness_slug: str, em
         )
     
     try:
-        tenant = tenant_repository.create(db, bussiness_name=bussiness_name, bussiness_slug=bussiness_slug)
+        tenant = tenant_repository.create(db, name=business_name, slug=business_slug)
         hashed_password = hash_password(password)
-        user = user_repository.create(db, email=email, password=hashed_password, tenant_id=tenant.id)
+        user = user_repository.create(db, email=email, hashed_password=hashed_password)
         
         db.flush()
 

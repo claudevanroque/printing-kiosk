@@ -6,6 +6,7 @@ from fastapi import (
     Depends,
     HTTPException,
     status,
+    Header,
 )
 
 from fastapi.security import OAuth2PasswordBearer
@@ -68,3 +69,45 @@ def require_platform_admin(current_user: User = Depends(get_current_user)) -> Us
             detail="You do not have platform administrator privileges",
         )
     return current_user
+
+def get_current_membership(
+    tenant_id: UUID = Header(
+        alias="X-Tenant-ID"
+    ),
+    current_user: User = Depends(
+        get_current_user
+    ),
+    db: Session = Depends(get_db),
+) -> TenantMembership:
+
+    membership = tenant_repository.get_membership(
+        db,
+        user_id=current_user.id,
+        tenant_id=tenant_id,
+    )
+
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this tenant",
+        )
+
+    return membership
+
+
+def require_tenant_manager(
+    membership: TenantMembership = Depends(
+        get_current_membership
+    ),
+) -> TenantMembership:
+
+    if membership.role.lower() not in {
+        "owner",
+        "admin",
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Owner or administrator required",
+        )
+
+    return membership

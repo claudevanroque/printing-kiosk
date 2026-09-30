@@ -11,6 +11,7 @@ from app.api.auth import router as auth_router
 from app.api.kiosks import router as kiosks_router
 from app.api.tenants import router as tenants_router
 from app.api.users import router as users_router
+from app.api.services import router as services_router
 
 app = FastAPI(title=APP_NAME, debug=DEBUG)
 
@@ -42,6 +43,11 @@ app.include_router(
 
 app.include_router(
     kiosks_router,
+    prefix="/api",
+)
+
+app.include_router(
+    services_router,
     prefix="/api",
 )
 
