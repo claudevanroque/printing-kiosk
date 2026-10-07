@@ -311,7 +311,7 @@ def calculate_price(db: Session, *, tenant_id: UUID, service_id: UUID, payload: 
         paper_size = payload.paper_size
         color_mode = payload.color_mode
 
-        price = service_price_repository.get_by_option(db, service_id=service.id, paper_size=paper_size, color_mode=color_mode)
+        price = service_price_repository.get_by_options(db, service_id=service.id, paper_size=paper_size, color_mode=color_mode)
 
         if not price:
             raise HTTPException(
@@ -327,14 +327,14 @@ def calculate_price(db: Session, *, tenant_id: UUID, service_id: UUID, payload: 
         
         total_pages = payload.pages * payload.copies
 
-        total_amount = (price.price_perpage * Decimal(total_pages)).quantize(Decimal("0.01"))
+        total_amount = (price.price_per_page * Decimal(total_pages)).quantize(Decimal("0.01"))
 
         return {
             "service_id": service.id,
             "service_type": service.service_type,
             "paper_size": paper_size,
             "color_mode": color_mode,
-            "price_per_page": price.price_perpage,
+            "price_per_page": price.price_per_page,
             "pages": payload.pages,
             "copies": payload.copies,
             "total_pages": total_pages,

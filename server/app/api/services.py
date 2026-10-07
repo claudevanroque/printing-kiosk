@@ -71,7 +71,7 @@ def update_price(service_id: UUID, price_id: UUID, payload: ServicePriceUpdate, 
 def update_price_status(service_id: UUID, price_id: UUID, payload: ServicePriceStatusUpdate, db: Session = Depends(get_db), membership: TenantMembership = Depends(require_tenant_manager)):
     return pricing_service.update_price_status(db, tenant_id=membership.tenant_id, service_id=service_id, price_id=price_id, new_status=payload.is_active)
 
-@router.post("/{service_id}/calculate-price", response_model=float)
+@router.post("/{service_id}/calculate-price", response_model=PriceCalculationResponse)
 def calculate_price(service_id: UUID, payload: PriceCalculationRequest, db: Session = Depends(get_db), membership: TenantMembership = Depends(get_current_membership)):
     return pricing_service.calculate_price(db, tenant_id=membership.tenant_id, service_id=service_id, payload=payload)
     
