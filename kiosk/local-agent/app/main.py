@@ -14,9 +14,6 @@ from app.api import (
 )
 
 from app.core.config import settings
-from app.core.database import (
-    initialize_database,
-)
 
 
 @asynccontextmanager
@@ -27,8 +24,6 @@ async def lifespan(
         parents=True,
         exist_ok=True,
     )
-
-    initialize_database()
 
     yield
 

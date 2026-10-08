@@ -1,25 +1,25 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from app.core.database import get_connection
+from app.core.database import get_db
 
 
 router = APIRouter(prefix="/health", tags=["Health"])
 
 
-def _database_status() -> str:
+def _database_status(db: Session) -> str:
     try:
-        with get_connection() as connection:
-            connection.execute("SELECT 1")
-
+        db.execute(text("SELECT 1"))
         return "connected"
     except Exception:
         return "disconnected"
 
 
 @router.get("")
-def health():
+def health(db: Session = Depends(get_db)):
     return {
         "status": "ok",
         "service": "kiosk-local-agent",
-        "database": _database_status(),
+        "database": _database_status(db),
     }

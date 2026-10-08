@@ -1,18 +1,19 @@
-import sqlite3
-from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
+from sqlalchemy.orm import Session
 from fastapi import HTTPException, UploadFile
 from PIL import Image
 from pypdf import PdfReader
 
 from app.core.config import settings
-from app.core.database import get_connection
+from app.core.datetime_utils import as_utc, utc_now
+from app.models.document import Document
 from app.schemas.document import (
     DocumentResponse,
     DocumentSource,
 )
+from app.repositories.document_repository import DocumentRepository
 
 
 ALLOWED_EXTENSIONS = {
@@ -31,52 +32,18 @@ CONTENT_TYPES = {
 }
 
 
-def _row_to_document(row: sqlite3.Row) -> DocumentResponse:
+def _to_document_response(document: Document) -> DocumentResponse:
     return DocumentResponse(
-        id=row["id"],
-        original_filename=row["original_filename"],
-        content_type=row["content_type"],
-        extension=row["extension"],
-        file_size=row["file_size"],
-        page_count=row["page_count"],
-        source=row["source"],
-        created_at=datetime.fromisoformat(
-            row["created_at"]
-        ),
-        preview_url=f"/api/documents/{row['id']}/file",
+        id=document.id,
+        original_filename=document.original_filename,
+        content_type=document.content_type,
+        extension=document.extension,
+        file_size=document.file_size,
+        page_count=document.page_count,
+        source=document.source,
+        created_at=as_utc(document.created_at),
+        preview_url=f"/api/documents/{document.id}/file",
     )
-
-
-def get_document(document_id: str) -> DocumentResponse | None:
-
-    with get_connection() as connection:
-        row = connection.execute(
-            """
-            SELECT *
-            FROM documents
-            WHERE id = ?
-            """,
-            (document_id,),
-        ).fetchone()
-
-    if not row:
-        return None
-
-    return _row_to_document(row)
-
-
-def get_document_record(document_id: str) -> sqlite3.Row | None:
-
-    with get_connection() as connection:
-        return connection.execute(
-            """
-            SELECT *
-            FROM documents
-            WHERE id = ?
-            """,
-            (document_id,),
-        ).fetchone()
-
 
 def _validate_pdf(path: Path) -> int:
     try:
@@ -117,10 +84,7 @@ def _validate_pdf(path: Path) -> int:
         ) from exc
 
 
-def _validate_image(
-    path: Path,
-    extension: str,
-) -> int:
+def _validate_image(path: Path, extension: str) -> int:
 
     expected_formats = {
         ".jpg": {"JPEG"},
@@ -148,7 +112,27 @@ def _validate_image(
         ) from exc
 
 
-async def save_document(upload: UploadFile, source: DocumentSource) -> DocumentResponse:
+def get_document(db: Session, document_id: str) -> DocumentResponse | None:
+    repository = DocumentRepository(db)
+    document = repository.get_by_id(document_id)
+
+    if not document:
+        return None
+
+    return _to_document_response(document)
+
+
+def get_document_record(db: Session, document_id: str) -> Document | None:
+    repository = DocumentRepository(db)
+    document = repository.get_by_id(document_id)
+
+    if not document:
+        return None
+
+    return document
+
+
+async def save_document(db: Session, upload: UploadFile, source: DocumentSource) -> DocumentResponse:
 
     if not upload.filename:
         raise HTTPException(
@@ -207,45 +191,25 @@ async def save_document(upload: UploadFile, source: DocumentSource) -> DocumentR
 
         content_type = CONTENT_TYPES[extension]
 
-        created_at = datetime.now(timezone.utc)
+        created_at = utc_now()
 
-        try:
-            with get_connection() as connection:
-                connection.execute(
-                    """
-                    INSERT INTO documents (
-                        id,
-                        original_filename,
-                        stored_filename,
-                        content_type,
-                        extension,
-                        file_size,
-                        page_count,
-                        source,
-                        created_at
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        document_id,
-                        original_filename,
-                        stored_filename,
-                        content_type,
-                        extension,
-                        total_size,
-                        page_count,
-                        source.value,
-                        created_at.isoformat(),
-                    ),
-                )
+        repository = DocumentRepository(db)
 
-                connection.commit()
+        document = repository.create(
+            Document(
+                id=document_id,
+                original_filename=original_filename,
+                stored_filename=stored_filename,
+                content_type=content_type,
+                extension=extension,
+                file_size=total_size,
+                page_count=page_count,
+                source=source,
+                created_at=created_at,
+            )
+        )
 
-        except Exception:
-            destination.unlink(missing_ok=True)
-            raise
-
-        document = get_document(document_id)
+        document = get_document(db, document_id)
 
         if not document:
             raise RuntimeError(
@@ -264,8 +228,8 @@ async def save_document(upload: UploadFile, source: DocumentSource) -> DocumentR
         await upload.close()
 
 
-def delete_document(document_id: str,) -> None:
-    record = get_document_record(document_id)
+def delete_document(db: Session, document_id: str,) -> None:
+    record = get_document_record(db, document_id)
 
     if not record:
         raise HTTPException(
@@ -273,26 +237,17 @@ def delete_document(document_id: str,) -> None:
             detail="Document not found.",
         )
 
-    path = (
-        settings.temp_path /
-        record["stored_filename"]
-    )
+    path = settings.temp_path / record.stored_filename
 
-    with get_connection() as connection:
-        try:
-            connection.execute(
-                """
-                DELETE FROM documents
-                WHERE id = ?
-                """,
-                (document_id,),
-            )
+    repository = DocumentRepository(db)
 
-            connection.commit()
-
-        except Exception:
-            connection.rollback()
-            raise
+    try:
+        repository.unlink_upload_session(document_id)
+        repository.delete(record)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
 
     path.unlink(
         missing_ok=True

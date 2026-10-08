@@ -1,9 +1,11 @@
 import html
-
+from typing import Annotated
+from sqlalchemy.orm import Session
 from fastapi import (
     APIRouter,
     File,
     UploadFile,
+    Depends,
 )
 
 from fastapi.responses import HTMLResponse
@@ -14,13 +16,11 @@ from app.schemas.upload_session import (
     UploadSessionResponse,
 )
 
-from app.services.upload_session_service import (
-    create_upload_session,
-    get_session_by_token,
-    get_upload_session,
-    upload_to_session,
-)
+from app.services import upload_session_service
 
+from app.core.database import get_db
+
+DbSession = Annotated[Session, Depends(get_db)]
 
 router = APIRouter(
     tags=["Upload Sessions"],
@@ -28,21 +28,21 @@ router = APIRouter(
 
 
 @router.post("/api/upload-sessions",response_model=UploadSessionResponse,)
-def create_session():
-    return create_upload_session()
+def create_session(db: DbSession):
+    return upload_session_service.create_upload_session(db)
 
 
 @router.get("/api/upload-sessions/{session_id}",response_model=UploadSessionResponse,)
-def session_status(session_id: str,):
-    return get_upload_session(session_id)
+def session_status(session_id: str, db: DbSession):
+    return upload_session_service.get_upload_session(db, session_id)
 
 @router.post("/api/upload-sessions/public/{token}/upload", response_model=UploadSessionResponse)
-async def upload_document(token: str, file: UploadFile = File(...),):
-    return await upload_to_session(token, file)
+async def upload_document(db: DbSession, token: str, file: UploadFile = File(...)):
+    return await upload_session_service.upload_to_session(db, token, file)
 
 @router.get("/upload/{token}", response_class=HTMLResponse)
-def mobile_upload_page(token: str,):
-    get_session_by_token(token)
+def mobile_upload_page(token: str, db: DbSession):
+    upload_session_service.get_session_by_token(db, token)
     safe_token = html.escape(token,quote=True,)
     max_size = (settings.max_file_size_mb)
 
