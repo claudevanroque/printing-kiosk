@@ -1,15 +1,13 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import api from "../services/localApi";
+import type { HealthResponse } from "../types/localDocument";
 
-import { api } from "../services/serverApi";
-
-
-interface HealthResponse {
-    status: string;
-    database: string;
-}
 
 
 function HomePage() {
+
+    const navigate = useNavigate();
 
     const [backendStatus, setBackendStatus] =
         useState("Checking...");
@@ -120,6 +118,7 @@ function HomePage() {
                 <button
                     type="button"
                     className="service-card"
+                    onClick={() => navigate("/print")}
                 >
 
                     <div className="service-icon">
