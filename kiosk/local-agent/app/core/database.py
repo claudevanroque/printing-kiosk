@@ -35,7 +35,7 @@ SessionLocal = sessionmaker(
 )
 
 
-def get_db() -> Generator[Session, None, None]:
+def get_local_db() -> Generator[Session, None, None]:
     db = SessionLocal()
 
     try:

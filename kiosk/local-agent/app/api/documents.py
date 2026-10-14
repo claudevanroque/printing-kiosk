@@ -11,13 +11,15 @@ from fastapi.responses import FileResponse
 
 from app.core.config import settings
 from app.schemas.document import (
+    DocumentPricingRequest,
+    DocumentPricingResponse,
     DocumentResponse,
     DocumentSource,
 )
 
 from app.services import document_service
 
-from app.core.database import get_db
+from app.core.database import get_local_db
 
 
 router = APIRouter(
@@ -25,7 +27,7 @@ router = APIRouter(
     tags=["Documents"],
 )
 
-DbSession = Annotated[Session, Depends(get_db)]
+DbSession = Annotated[Session, Depends(get_local_db)]
 
 
 @router.post("/upload",response_model=DocumentResponse)
@@ -51,6 +53,14 @@ def document_details(document_id: str, db: DbSession):
         )
 
     return document
+
+@router.post("/{document_id}/calculate-price", response_model=DocumentPricingResponse)
+def calculate_document_price(document_id: str, payload: DocumentPricingRequest, db: DbSession):
+    return document_service.calculate_document_price(
+        db=db,
+        document_id=document_id,
+        payload=payload,
+    )
 
 
 @router.get("/{document_id}/file")

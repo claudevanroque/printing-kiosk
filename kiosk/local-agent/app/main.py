@@ -1,7 +1,6 @@
+import logging
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI
-
 from fastapi.middleware.cors import (
     CORSMiddleware,
 )
@@ -11,19 +10,39 @@ from app.api import (
     health,
     hotspot,
     upload_sessions,
+    pricing,
+    service_jobs,
 )
 
 from app.core.config import settings
+from app.core.logging import setup_logging
 
+setup_logging()
+from app.services.pricing_sync_service import pricing_sync_service
+
+logger = logging.getLogger(__name__)
+
+async def sync_pricing_on_startup():
+    try:
+        pricing = await pricing_sync_service.sync()
+
+        logger.info(
+            "Cloud pricing synchronized successfully. "
+            "Tenant: %s | Version: %s",
+            pricing.tenant_id,
+            pricing.version,
+        )
+
+    except Exception:
+        logger.exception(
+            "Cloud pricing synchronization failed. "
+            "Existing local pricing will be preserved."
+        )
 
 @asynccontextmanager
-async def lifespan(
-    app: FastAPI,
-):
-    settings.temp_path.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
+async def lifespan(app: FastAPI,):
+    settings.temp_path.mkdir(parents=True, exist_ok=True)
+    await sync_pricing_on_startup()
 
     yield
 
@@ -63,6 +82,17 @@ app.include_router(
 
 app.include_router(
     upload_sessions.router,
+    prefix="/api",
+)
+
+app.include_router(
+    pricing.router,
+    prefix="/api",
+)
+
+app.include_router(
+    service_jobs.router,
+    prefix="/api",
 )
 
 

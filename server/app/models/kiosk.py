@@ -13,6 +13,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.core.utils import utc_now
 
 class Kiosk(Base):
     __tablename__ = "kiosks"
@@ -33,7 +34,7 @@ class Kiosk(Base):
 
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    location: Mapped[str] = mapped_column(String(256), nullable=False)
+    location: Mapped[str] = mapped_column(String(256), nullable=True)
 
     device_secret_hash: Mapped[str] = mapped_column(String(256), nullable=True)
 
@@ -41,4 +42,4 @@ class Kiosk(Base):
 
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now(timezone.utc), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now, nullable=False)

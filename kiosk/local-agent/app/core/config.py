@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     debug: bool = os.getenv("DEBUG") == "true"
 
     host: str = os.getenv("HOST", "0.0.0.0")
-    port: int = int(os.getenv("PORT", 9001))
+    port: int = int(os.getenv("PORT", 9000))
 
     temp_dir: str = os.getenv("TEMP_DIR")
     database_path: str = os.getenv("DATABASE_PATH")
@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     hotspot_password: str = os.getenv("HOTSPOT_PASSWORD")
 
     frontend_origin: str = os.getenv("FRONTEND_ORIGIN")
+
+    cloud_api_url: str = os.getenv("CLOUD_API_URL")
+    kiosk_code: str = os.getenv("KIOSK_CODE")
+    kiosk_device_secret: str = os.getenv("KIOSK_DEVICE_SECRET")
+    kiosk_tenant_id: str = os.getenv("KIOSK_TENANT_ID")
 
     model_config = SettingsConfigDict(
         env_file=".env",

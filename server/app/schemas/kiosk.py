@@ -24,3 +24,7 @@ class KioskResponse(BaseModel):
 
 class KioskCreatedResponse(KioskResponse):
     device_secret: str
+
+class KioskSecretRotatedResponse(BaseModel):
+    kiosk_id: UUID
+    device_secret: str

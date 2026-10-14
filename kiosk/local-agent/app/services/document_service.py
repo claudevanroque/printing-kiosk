@@ -7,13 +7,18 @@ from PIL import Image
 from pypdf import PdfReader
 
 from app.core.config import settings
-from app.core.datetime_utils import as_utc, utc_now
+from app.core.utils import as_utc, utc_now
 from app.models.document import Document
 from app.schemas.document import (
     DocumentResponse,
     DocumentSource,
+    DocumentPricingRequest,
+    DocumentPricingResponse,
 )
+from app.schemas.pricing_calculation import PricingCalculationRequest
+from app.services.pricing_calculation_service import PricingCalculationService
 from app.repositories.document_repository import DocumentRepository
+from app.repositories.service_job_repository import ServiceJobRepository
 
 
 ALLOWED_EXTENSIONS = {
@@ -229,7 +234,14 @@ async def save_document(db: Session, upload: UploadFile, source: DocumentSource)
 
 
 def delete_document(db: Session, document_id: str,) -> None:
+    service_repository = ServiceJobRepository(db)
     record = get_document_record(db, document_id)
+
+    if service_repository.document_has_jobs(document_id):
+        raise HTTPException(
+            status_code=400,
+            detail="Document has associated service jobs and cannot be deleted.",
+        )
 
     if not record:
         raise HTTPException(
@@ -251,4 +263,54 @@ def delete_document(db: Session, document_id: str,) -> None:
 
     path.unlink(
         missing_ok=True
+    )
+
+
+def calculate_document_price(db: Session, document_id: str, payload: DocumentPricingRequest) -> DocumentPricingResponse:
+    """
+    Calculate a document's printing cost using
+    its validated page count and local SQLite pricing.
+    """
+
+    document = get_document_record(db, document_id,)
+
+    if document is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found.",
+        )
+
+    # Verify the uploaded file is still available.
+    path = settings.temp_path / document.stored_filename
+
+    if not path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail="Document file is missing.",
+        )
+
+    if document.page_count < 1:
+        raise HTTPException(
+            status_code=422,
+            detail="Document has an invalid page count.",
+        )
+
+    # Never trust a page count submitted by the frontend.
+    pricing_request = PricingCalculationRequest(
+        service_type=payload.service_type,
+        paper_size=payload.paper_size,
+        color_mode=payload.color_mode,
+        page_count=document.page_count,
+        copies=payload.copies,
+    )
+
+    # Reuse the tested Phase 5.4 pricing engine.
+    pricing_service = PricingCalculationService(db)
+
+    result = pricing_service.calculate(pricing_request)
+
+    return DocumentPricingResponse(
+        **result.model_dump(),
+        document_id=document.id,
+        original_filename=document.original_filename,
     )

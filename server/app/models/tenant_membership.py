@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
+from app.core.utils import utc_now
 
 class TenantMembership(Base):
     __tablename__ = "tenant_memberships"
@@ -36,6 +37,6 @@ class TenantMembership(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=utc_now,
         nullable=False
     )

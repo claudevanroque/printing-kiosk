@@ -20,6 +20,7 @@ dependencies = [
     "winrt-windows-foundation-collections>=3.2.1",
     "sqlalchemy>=2.1.4",
     "alembic>=1.20.0",
+    "httpx>=0.28.1",
 ]
 
 [tool.uv]

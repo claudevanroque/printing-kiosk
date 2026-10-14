@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
+from app.core.database import get_local_db
 
 
 router = APIRouter(prefix="/health", tags=["Health"])
@@ -17,7 +17,7 @@ def _database_status(db: Session) -> str:
 
 
 @router.get("")
-def health(db: Session = Depends(get_db)):
+def health(db: Session = Depends(get_local_db)):
     return {
         "status": "ok",
         "service": "kiosk-local-agent",

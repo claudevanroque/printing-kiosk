@@ -18,29 +18,29 @@ from app.schemas.upload_session import (
 
 from app.services import upload_session_service
 
-from app.core.database import get_db
+from app.core.database import get_local_db
 
-DbSession = Annotated[Session, Depends(get_db)]
+DbSession = Annotated[Session, Depends(get_local_db)]
 
 router = APIRouter(
     tags=["Upload Sessions"],
 )
 
 
-@router.post("/api/upload-sessions",response_model=UploadSessionResponse,)
+@router.post("/upload-sessions",response_model=UploadSessionResponse,)
 def create_session(db: DbSession):
     return upload_session_service.create_upload_session(db)
 
 
-@router.get("/api/upload-sessions/{session_id}",response_model=UploadSessionResponse,)
+@router.get("/upload-sessions/{session_id}",response_model=UploadSessionResponse,)
 def session_status(session_id: str, db: DbSession):
     return upload_session_service.get_upload_session(db, session_id)
 
-@router.post("/api/upload-sessions/public/{token}/upload", response_model=UploadSessionResponse)
+@router.post("/upload-sessions/public/{token}/upload", response_model=UploadSessionResponse)
 async def upload_document(db: DbSession, token: str, file: UploadFile = File(...)):
     return await upload_session_service.upload_to_session(db, token, file)
 
-@router.get("/upload/{token}", response_class=HTMLResponse)
+@router.get("/upload-sessions/public/{token}", response_class=HTMLResponse)
 def mobile_upload_page(token: str, db: DbSession):
     upload_session_service.get_session_by_token(db, token)
     safe_token = html.escape(token,quote=True,)

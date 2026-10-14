@@ -12,6 +12,8 @@ from app.core.config import (
     SECRET_KEY,
 )
 
+from app.core.utils import utc_now
+
 
 password_hash = PasswordHash.recommended()
 
@@ -45,4 +47,15 @@ def get_refresh_token_expiration() -> datetime:
 def decode_token(token: str) -> dict:
     return jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
 
+def create_kiosk_access_token(kiosk_id: uuid.UUID) -> str:
+    now = utc_now()
+    exp = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {
+        "sub": str(kiosk_id),
+        "type": "kiosk_access",
+        "iat": now,
+        "exp": exp,
+        "jti": str(uuid.uuid4()),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 

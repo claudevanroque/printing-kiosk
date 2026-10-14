@@ -1,5 +1,6 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
+from app.core.utils import utc_now
 
 from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.dialects.postgresql import UUID
@@ -22,6 +23,6 @@ class Tenant(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
+        default=utc_now,
         nullable=False
     )

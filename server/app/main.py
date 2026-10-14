@@ -12,6 +12,9 @@ from app.api.kiosks import router as kiosks_router
 from app.api.tenants import router as tenants_router
 from app.api.users import router as users_router
 from app.api.services import router as services_router
+from app.api.v1.kiosk_auth import router as kiosk_auth_router
+from app.api.v1.kiosk_pricing import router as kiosk_pricing_router
+
 
 app = FastAPI(title=APP_NAME, debug=DEBUG)
 
@@ -49,6 +52,15 @@ app.include_router(
 app.include_router(
     services_router,
     prefix="/api",
+)
+
+app.include_router(
+    kiosk_auth_router,
+    prefix="/api/v1",
+)
+app.include_router(
+    kiosk_pricing_router,
+    prefix="/api/v1",
 )
 
 @app.get("/api")

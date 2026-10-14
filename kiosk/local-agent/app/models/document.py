@@ -5,6 +5,7 @@ from sqlalchemy import BigInteger, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
+from app.core.utils import utc_now
 
 if TYPE_CHECKING:
     from app.models.upload_session import UploadSession
@@ -55,6 +56,7 @@ class Document(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
+        default=utc_now,
         nullable=False,
     )
 

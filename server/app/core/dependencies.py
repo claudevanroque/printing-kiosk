@@ -9,12 +9,14 @@ from fastapi import (
     Header,
 )
 
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_token
 from app.models.user import User
+from app.models.kiosk import Kiosk
 from app.repositories import user_repository
 from app.models.tenant_membership import TenantMembership
 from app.repositories import tenant_repository
@@ -111,3 +113,56 @@ def require_tenant_manager(
         )
 
     return membership
+
+
+kiosk_bearer = HTTPBearer(auto_error=False)
+def get_current_kiosk(
+    credentials: HTTPAuthorizationCredentials | None = Depends(
+        kiosk_bearer
+    ),
+    db: Session = Depends(get_db),
+) -> Kiosk:
+
+    unauthorized = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or expired kiosk token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    if credentials is None:
+        raise unauthorized
+
+    try:
+        payload = decode_token(credentials.credentials)
+
+        if payload.get("type") != "kiosk_access":
+            raise unauthorized
+
+        if not all(
+            claim in payload
+            for claim in ("sub", "iat", "exp", "jti")
+        ):
+            raise unauthorized
+
+        kiosk_id = UUID(payload["sub"])
+
+    except (
+        jwt.InvalidTokenError,
+        ValueError,
+        KeyError,
+        TypeError,
+    ):
+        raise unauthorized
+
+    kiosk = db.scalar(
+        select(Kiosk).where(Kiosk.id == kiosk_id)
+    )
+
+    if (
+        kiosk is None
+        or not kiosk.is_active
+        or not kiosk.device_secret_hash
+    ):
+        raise unauthorized
+
+    return kiosk
