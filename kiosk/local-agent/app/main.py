@@ -1,5 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
+import httpx
+from pydantic import ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 from fastapi import FastAPI
 from fastapi.middleware.cors import (
     CORSMiddleware,
@@ -20,6 +23,13 @@ from app.api import (
 
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.services.cloud_auth_service import (
+    CloudAuthenticationError,
+    CloudConnectionError,
+    CloudTimeoutError,
+    CloudCredentialsError,
+    CloudServerError,
+)
 from app.services.pricing_sync_service import pricing_sync_service
 from app.services.print_worker_service import run_print_worker
 from app.core.database import engine
@@ -28,7 +38,10 @@ setup_logging()
 
 logger = logging.getLogger(__name__)
 
+
 async def sync_pricing_on_startup():
+    logger.info("Starting cloud pricing synchronization.")
+
     try:
         pricing = await pricing_sync_service.sync()
 
@@ -39,11 +52,64 @@ async def sync_pricing_on_startup():
             pricing.version,
         )
 
+    except (CloudConnectionError, httpx.ConnectError):
+        logger.warning(
+            "Cloud pricing sync unavailable: "
+            "Cannot connect to cloud server."
+        )
+
+    except (CloudTimeoutError, httpx.TimeoutException):
+        logger.warning(
+            "Cloud pricing sync timed out."
+        )
+
+    except CloudCredentialsError:
+        logger.error(
+            "Cloud pricing sync failed: "
+            "Kiosk credentials rejected."
+        )
+
+    except CloudServerError as exc:
+        logger.warning(
+            "Cloud pricing sync unavailable: %s",
+            exc,
+        )
+
+    except CloudAuthenticationError as exc:
+        logger.error(
+            "Cloud pricing authentication failed: %s",
+            exc,
+        )
+
+    except httpx.HTTPStatusError as exc:
+        logger.error(
+            "Cloud pricing request failed: HTTP %s",
+            exc.response.status_code,
+        )
+
+    except httpx.RequestError:
+        logger.warning(
+            "Cloud pricing sync unavailable: "
+            "Network request failed."
+        )
+
+    except ValidationError:
+        logger.error(
+            "Cloud pricing sync failed: "
+            "Invalid pricing response."
+        )
+
+    except SQLAlchemyError:
+        logger.error(
+            "Cloud pricing sync failed: "
+            "Local database update error."
+        )
+
     except Exception:
         logger.exception(
-            "Cloud pricing synchronization failed. "
-            "Existing local pricing will be preserved."
+            "Unexpected cloud pricing synchronization error."
         )
+
 
 
 @asynccontextmanager
