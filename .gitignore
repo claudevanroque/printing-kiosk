@@ -5,3 +5,6 @@ node_modules/
 dist/
 kiosk/local-agent/data/
 kiosk/local-agent/logs/
+kiosk/local-agent/scripts/test_scripts/
+kiosk/local-agent/tools
+kiosk/local-agent/tests

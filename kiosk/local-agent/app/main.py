@@ -4,6 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import (
     CORSMiddleware,
 )
+import asyncio
+import threading
 
 from app.api import (
     documents,
@@ -12,13 +14,17 @@ from app.api import (
     upload_sessions,
     pricing,
     service_jobs,
+    printers,
+    print_queue,
 )
 
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.services.pricing_sync_service import pricing_sync_service
+from app.services.print_worker_service import run_print_worker
+from app.core.database import engine
 
 setup_logging()
-from app.services.pricing_sync_service import pricing_sync_service
 
 logger = logging.getLogger(__name__)
 
@@ -39,12 +45,28 @@ async def sync_pricing_on_startup():
             "Existing local pricing will be preserved."
         )
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI,):
     settings.temp_path.mkdir(parents=True, exist_ok=True)
     await sync_pricing_on_startup()
-
-    yield
+    
+    stop_event = threading.Event()
+    worker_task = asyncio.create_task(
+        run_print_worker(
+            engine=engine,
+            stop_event=stop_event,
+        )
+    )
+    try:
+        yield
+    finally:
+        try:
+            stop_event.set()
+            await asyncio.wait_for(worker_task, timeout=130)
+        except Exception:
+            logger.exception("Print worker shutdown timed out.")
+    
 
 
 app = FastAPI(
@@ -94,6 +116,17 @@ app.include_router(
     service_jobs.router,
     prefix="/api",
 )
+
+app.include_router(
+    printers.router,
+    prefix="/api",
+)
+
+app.include_router(
+    print_queue.router,
+    prefix="/api",
+)
+
 
 
 @app.get("/")

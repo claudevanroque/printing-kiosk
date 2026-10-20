@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+PrintOrientation = Literal["auto", "portrait", "landscape"]
+
 
 class CreateServiceJobRequest(BaseModel):
     document_id: str = Field(min_length=1)
@@ -12,6 +14,7 @@ class CreateServiceJobRequest(BaseModel):
 
     paper_size: str = Field(min_length=1)
     color_mode: str = Field(min_length=1)
+    orientation: PrintOrientation = Field(default="auto")
 
     copies: int = Field(default=1, ge=1, le=1000)
 
@@ -31,6 +34,7 @@ class ServiceJobResponse(BaseModel):
     service_type: str
     paper_size: str | None
     color_mode: str | None
+    orientation: PrintOrientation
 
     page_count: int
     copies: int

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     host: str = os.getenv("HOST", "0.0.0.0")
     port: int = int(os.getenv("PORT", 9000))
 
+    sumatra_path: str = os.getenv("SUMATRA_PATH")
     temp_dir: str = os.getenv("TEMP_DIR")
     database_path: str = os.getenv("DATABASE_PATH")
 
@@ -48,6 +49,10 @@ class Settings(BaseSettings):
     @property
     def database_file(self) -> Path:
         return Path(self.database_path)
+    
+    @property
+    def sumatra_executable(self) -> Path:
+        return Path(self.sumatra_path)
 
     @property
     def max_file_size_bytes(self) -> int:

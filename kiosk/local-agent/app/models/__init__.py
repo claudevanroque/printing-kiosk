@@ -3,6 +3,8 @@ from app.models.document import Document
 from app.models.upload_session import UploadSession
 from app.models.pricing import LocalService, LocalServicePrice, PricingSyncState
 from app.models.service_job import ServiceJob
+from app.models.printer_assignment import PrinterAssignment
+from app.models.print_execution import PrintExecution
 
 
 __all__ = [
@@ -12,5 +14,7 @@ __all__ = [
     "LocalService",
     "LocalServicePrice",
     "PricingSyncState",
-    "ServiceJob"
+    "ServiceJob",
+    "PrinterAssignment",
+    "PrintExecution"
 ]

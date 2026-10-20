@@ -35,7 +35,7 @@ class ServiceJobService:
         return digest.hexdigest()
 
 
-    def create_service_job(self, payload: CreateServiceJobRequest,) -> ServiceJob:
+    def create_service_job(self, payload: CreateServiceJobRequest) -> ServiceJob:
 
         document = document_service.get_document_record(self.db, payload.document_id)
 
@@ -105,6 +105,7 @@ class ServiceJobService:
             service_type=quotation.service_type,
             paper_size=quotation.paper_size,
             color_mode=quotation.color_mode,
+            orientation=payload.orientation,
             page_count=quotation.page_count,
             copies=quotation.copies,
             total_pages=quotation.total_pages,

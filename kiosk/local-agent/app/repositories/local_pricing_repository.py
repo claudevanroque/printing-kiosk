@@ -114,3 +114,12 @@ class LocalPricingRepository:
         return list(
             self.db.scalars(stmt).all()
         )
+    
+    def valid_paper_size(self, paper_size: str) -> bool:
+        stmt = (
+            select(LocalServicePrice)
+            .where(LocalServicePrice.paper_size == paper_size)
+            .limit(1)
+        )
+
+        return self.db.scalars(stmt).first() is not None

@@ -37,6 +37,10 @@ class ServiceJob(Base):
             "'failed', 'cancelled')",
             name="ck_service_jobs_status",
         ),
+        CheckConstraint(
+            "orientation IN ('auto', 'portrait', 'landscape')",
+            name="ck_service_jobs_orientation",
+        ),
     )
 
     id: Mapped[str] = mapped_column(
@@ -64,6 +68,13 @@ class ServiceJob(Base):
     color_mode: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,
+    )
+
+    orientation: Mapped[str | None] = mapped_column(
+        String(20),
+        nullable=False,
+        default="auto",
+        server_default="auto",
     )
 
     page_count: Mapped[int] = mapped_column(
